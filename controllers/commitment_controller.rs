@@ -28,7 +28,7 @@ pub async fn create_commitment(
 ) -> HttpResponse {
     let data: CreateCommitmentDto = data.into_inner();
 
-    if commitment_service::find_commitment(&data.commitment).await.is_ok() {
+    if commitment_service::find(&data.commitment).await.is_ok() {
         return messages::COMMITMENT_EXISTED.get_response();
     }
 
@@ -56,7 +56,7 @@ pub async fn create_commitment(
 pub async fn get_commitment(
     commitment: web::Path<String>,
 ) -> HttpResponse {
-    match commitment_service::find_commitment(&commitment.into_inner()).await {
+    match commitment_service::find(&commitment.into_inner()).await {
         Ok(result) => HttpResponse::Ok().json(result),
         Err(err) => err.get_response(),
     }

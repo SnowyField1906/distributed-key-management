@@ -5,8 +5,13 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[features]
-hashes = []
+[[bin]]
+name = "node"
+path = "main.rs"
+
+[[bin]]
+name = "p2p"
+path = "grpc/main.rs"
 
 [dependencies]
 lazy_static = "1.4.0"
@@ -27,8 +32,16 @@ num-bigint = "0.4.4"
 keccak-hash = "0.10.0"
 magic-crypt = "3.1.13"
 ecies = "0.2.6"
+tonic = "0.10.2"
+tonic-reflection = "0.10.2"
+prost = "0.12.3"
+prost-types = "0.12.3"
+tonic-build = "0.9.2"
 
 [dependencies.mongodb]
 version = "2.2.0"
 default-features = false
 features = ["async-std-runtime"]
+
+[build-dependencies]
+tonic-build = "0.9.2"

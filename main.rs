@@ -2,6 +2,7 @@ mod common;
 mod config;
 mod controllers;
 mod dtos;
+mod grpc;
 mod schemas;
 mod services;
 // mod utils;
@@ -30,7 +31,6 @@ async fn main() -> std::io::Result<()> {
     let node_name: String = env::args().nth(1).unwrap();
 
     let env_path: path::PathBuf = env::current_dir().and_then(|a| Ok(a
-        .join("src")
         .join("config")
         .join("node_info")
         .join(format!("{}.env", node_name))

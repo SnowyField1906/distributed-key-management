@@ -31,7 +31,7 @@ pub async fn create(data: CreateCommitmentDto) -> Result<(), messages::Error> {
     }
 }
 
-pub async fn find_commitment(commitment: &str) -> Result<Commitment, messages::Error> {
+pub async fn find(commitment: &str) -> Result<Commitment, messages::Error> {
     let this: Collection<Commitment> = this().await;
 
     match this.find_one(

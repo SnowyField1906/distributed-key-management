@@ -55,6 +55,10 @@ pub const INVALID_NODE_SIGNATURE: Error = Error {
     status: StatusCode::BAD_REQUEST,
     message: "The Node Signature is invalid"
 };
+pub const WALLET_EXISTED: Error = Error {
+    status: StatusCode::CONFLICT,
+    message: "The Wallet already existed"
+};
 pub const WALLET_NOT_FOUND: Error = Error {
     status: StatusCode::NOT_FOUND,
     message: "The Wallet is not found"

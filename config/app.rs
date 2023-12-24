@@ -16,5 +16,6 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
             .service(ping)
             .service(commitment_controller::create_commitment)
             .service(commitment_controller::get_commitment)
+            .service(shared_key_controller::lookup_shared_secret)
     );
 }

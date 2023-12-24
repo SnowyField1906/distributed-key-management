@@ -42,7 +42,7 @@ pub async fn create(owner: &str) -> Result<PublicKey, messages::Error> {
     }
 }
 
-pub async fn find_shared_key_by_owner(owner: &str) -> Result<SharedKey, messages::Error> {
+pub async fn find_by_owner(owner: &str) -> Result<SharedKey, messages::Error> {
     let this: Collection<SharedKey> = this().await;
 
     match this.find_one(
@@ -76,7 +76,7 @@ pub async fn add_received_share(
 pub async fn derive_shared_secret(owner: &str) -> Result<(), messages::Error> {
     let this: Collection<SharedKey> = this().await;
 
-    let shared_key: SharedKey = find_shared_key_by_owner(owner).await?;
+    let shared_key: SharedKey = find_by_owner(owner).await?;
     
     let mut shared_secret: BigUint = BigUint::default();
     let n_secp256k1: BigUint = BigUint::from_bytes_le(&CURVE_ORDER);
