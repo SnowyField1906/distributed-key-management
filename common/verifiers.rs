@@ -1,1 +1,0 @@
-pub const VERIFIERS: [&'static str; 1] = ["google"];

@@ -1,5 +1,11 @@
-use mongodb::bson::oid::ObjectId;
-use serde::{Serialize, Deserialize};
+use mongodb::bson::{
+    doc,
+    oid::ObjectId
+};
+use serde::{
+    Serialize,
+    Deserialize
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct SharedKey {

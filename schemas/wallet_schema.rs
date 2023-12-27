@@ -1,5 +1,11 @@
-use mongodb::bson::{doc, oid::ObjectId};
-use serde::{Deserialize, Serialize};
+use mongodb::bson::{
+    doc,
+    oid::ObjectId
+};
+use serde::{
+    Serialize,
+    Deserialize
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct Wallet {

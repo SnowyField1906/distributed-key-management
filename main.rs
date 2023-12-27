@@ -28,19 +28,19 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
     dotenv().ok();
 
-    let node_name: String = env::args().nth(1).unwrap();
+    let node: usize = env::args().nth(1).unwrap().parse().unwrap();
 
     let env_path: path::PathBuf = env::current_dir().and_then(|a| Ok(a
         .join("config")
         .join("node_info")
-        .join(format!("{}.env", node_name))
+        .join(format!("node{}.env", node))
     )).unwrap();
     dotenv::from_path(env_path.as_path()).ok();
 
     let client: Database = db::database().await;
     let app_url: String = dotenv::var("URL").unwrap();
 
-    println!("Server is running on {} at {}", node_name, app_url);
+    println!("Server is running on node {} at {}", node, app_url);
 
     HttpServer::new(move || {
         App::new()

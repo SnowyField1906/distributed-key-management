@@ -10,7 +10,10 @@ use crate::{
         node_commitment_dto::NodeCommitmentDto,
     },
     services::commitment_service,
-    common::messages,
+    common::{
+        messages,
+        crypto,
+    },
 };
 use secp256k1::{
     Secp256k1,
@@ -48,7 +51,7 @@ pub async fn create_commitment(
     HttpResponse::Ok().json(NodeCommitmentDto {
         data: raw_data,
         signature: signature.serialize_der().to_string(),
-        pub_key: hex::encode(pub_key.serialize()),
+        pub_key: crypto::pub_key_to_string(&pub_key),
     })
 }
 

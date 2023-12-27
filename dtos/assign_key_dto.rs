@@ -1,6 +1,10 @@
-use serde::{Deserialize, Serialize};
-use crate::common::verifiers::VERIFIERS;
-use validator::{ Validate, ValidationError };
+use serde::{
+    Deserialize, Serialize
+};
+use validator::{
+    Validate, ValidationError
+};
+use crate::common::constants::VERIFIERS;
 
 #[derive(Validate, Debug, Deserialize, Serialize)]
 pub struct AssignKey {

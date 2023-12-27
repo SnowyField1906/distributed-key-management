@@ -1,6 +1,8 @@
-use serde::{Deserialize, Serialize};
-use crate::dtos::node_commitment_dto::NodeCommitmentDto;
+use serde::{
+    Deserialize, Serialize
+};
 use validator::Validate;
+use crate::dtos::node_commitment_dto::NodeCommitmentDto;
 
 #[derive(Validate, Debug, Serialize, Deserialize)]
 pub struct LookupSharedSecretDto {

@@ -3,6 +3,13 @@ use actix_web::{
     HttpResponse,
     post,
 };
+use secp256k1::{
+    Secp256k1,
+    SecretKey,
+    PublicKey,
+    All,
+};
+use ecies::encrypt;
 use crate::{
     dtos::{
         lookup_shared_secret_dto::LookupSharedSecretDto,
@@ -12,16 +19,11 @@ use crate::{
         shared_key_service,
         commitment_service,
     },
-    common::messages,
+    common::{
+        messages,
+        crypto
+    },
 };
-use secp256k1::{
-    Secp256k1,
-    SecretKey,
-    PublicKey,
-    All,
-};
-use keccak_hash::keccak256;
-use ecies::encrypt;
 
 #[post("shared-key")]
 async fn lookup_shared_secret(
@@ -31,7 +33,7 @@ async fn lookup_shared_secret(
     
     let token_id: &mut Vec<u8> = &mut hex::decode(data.token_id.clone()).unwrap();
     
-    keccak256(token_id);
+    crypto::create_keccak256(token_id);
 
     if commitment_service::find(&hex::encode(token_id)).await.is_err() {
         return messages::COMMITMENT_NOT_FOUND.get_response();

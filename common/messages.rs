@@ -28,6 +28,17 @@ impl Error {
     pub fn get_response(&self) -> HttpResponse {
         HttpResponse::build(self.status).json(self.get_body())
     }
+
+    pub fn get_message(&self) -> &'static str {
+        self.message
+    }
+
+    pub fn new(message: &'static str) -> Error {
+        Error {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            message,
+        }
+    }
 }
 
 
@@ -62,4 +73,16 @@ pub const WALLET_EXISTED: Error = Error {
 pub const WALLET_NOT_FOUND: Error = Error {
     status: StatusCode::NOT_FOUND,
     message: "The Wallet is not found"
+};
+pub const INIT_SHARED_SECRET_FAILED: Error = Error {
+    status: StatusCode::INTERNAL_SERVER_ERROR,
+    message: "Init Shared Secret failed"
+};
+pub const GENERATE_SHARES_FAILED: Error = Error {
+    status: StatusCode::INTERNAL_SERVER_ERROR,
+    message: "Generate Shares failed"
+};
+pub const DERIVE_SHARED_SECRET_FAILED: Error = Error {
+    status: StatusCode::INTERNAL_SERVER_ERROR,
+    message: "Derive Shared Secret failed"
 };

@@ -1,22 +1,21 @@
 use mongodb::{
     bson::doc,
-    options::FindOneOptions,
     Collection,
 };
+use secp256k1::{
+    SecretKey,
+    PublicKey,
+    constants::CURVE_ORDER,
+};
+use num_bigint::BigUint;
 use crate::{
-    common::messages,
+    common::{
+        messages,
+        crypto,
+    },
     config::db::collection,
     schemas::shared_key_schema::SharedKey,
 };
-use secp256k1::{
-    Secp256k1,
-    SecretKey,
-    PublicKey,
-    All,
-    constants::CURVE_ORDER,
-    rand::rngs::OsRng,
-};
-use num_bigint::BigUint;
 
 async fn this() -> Collection<SharedKey> {
     collection("shared_keys").await
@@ -25,12 +24,11 @@ async fn this() -> Collection<SharedKey> {
 pub async fn create(owner: &str) -> Result<PublicKey, messages::Error> {
     let this: Collection<SharedKey> = this().await;
 
-    let secp: Secp256k1<All> = Secp256k1::new();
-    let (priv_key, pub_key): (SecretKey, PublicKey) = secp.generate_keypair(&mut OsRng);
+    let (priv_key, pub_key): (SecretKey, PublicKey) = crypto::generate_keypair();
 
     let new_shared_key: SharedKey = SharedKey {
         id: None,
-        secret: hex::encode(priv_key.secret_bytes()),
+        secret: crypto::priv_key_to_string(&priv_key),
         owner: owner.to_string(),
         received_shares: vec![],
         shared_secret: None,
@@ -47,7 +45,7 @@ pub async fn find_by_owner(owner: &str) -> Result<SharedKey, messages::Error> {
 
     match this.find_one(
         doc! { "owner": owner },
-        FindOneOptions::builder().build()
+        None
     ).await {
         Ok(res) => match res {
             Some(shared_key) => Ok(shared_key),
@@ -79,13 +77,15 @@ pub async fn derive_shared_secret(owner: &str) -> Result<(), messages::Error> {
     let shared_key: SharedKey = find_by_owner(owner).await?;
     
     let mut shared_secret: BigUint = BigUint::default();
-    let n_secp256k1: BigUint = BigUint::from_bytes_le(&CURVE_ORDER);
     let received_shares: Vec<BigUint> = shared_key.received_shares.iter().map(|received_share| {
         BigUint::from_bytes_le(&hex::decode(received_share).unwrap()[..])
     }).collect();
 
+    let n_secp256k1: BigUint = BigUint::from_bytes_be(&CURVE_ORDER);
+
     for i in 0..received_shares.len() {
-        shared_secret = (shared_secret + received_shares.get(i).unwrap()) % &n_secp256k1;
+        let current = received_shares.get(i).unwrap();
+        shared_secret = (shared_secret + current) % &n_secp256k1;
     }
 
     match this.update_one(
