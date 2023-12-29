@@ -26,9 +26,7 @@ use secp256k1::{
 };
 
 #[post("commitment")]
-pub async fn create_commitment(
-    data: web::Json<CreateCommitmentDto>,
-) -> HttpResponse {
+pub async fn create_commitment(data: web::Json<CreateCommitmentDto>) -> HttpResponse {
     let data: CreateCommitmentDto = data.into_inner();
 
     if commitment_service::find(&data.commitment).await.is_ok() {
@@ -56,9 +54,7 @@ pub async fn create_commitment(
 }
 
 #[get("commitment/{commitment}")]
-pub async fn get_commitment(
-    commitment: web::Path<String>,
-) -> HttpResponse {
+pub async fn get_commitment(commitment: web::Path<String>) -> HttpResponse {
     match commitment_service::find(&commitment.into_inner()).await {
         Ok(result) => HttpResponse::Ok().json(result),
         Err(err) => err.get_response(),

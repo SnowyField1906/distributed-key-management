@@ -4,9 +4,9 @@ use serde::{
 use validator::Validate;
 
 #[derive(Validate, Debug, Deserialize, Serialize)]
-pub struct LookupWallet {
+pub struct LookupWalletDto {
     #[validate(length(min = 1))]
-    owner: String,
-    address: String,
-    public_key: String,
+    pub owner: String,
+    pub address: String,
+    pub pub_key: String,
 }

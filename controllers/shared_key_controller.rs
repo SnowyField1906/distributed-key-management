@@ -26,9 +26,7 @@ use crate::{
 };
 
 #[post("shared-key")]
-async fn lookup_shared_secret(
-    data: web::Json<LookupSharedSecretDto>,
-) -> HttpResponse {
+async fn lookup_shared_secret(data: web::Json<LookupSharedSecretDto>) -> HttpResponse {
     let data: LookupSharedSecretDto = data.into_inner();
     
     let token_id: &mut Vec<u8> = &mut hex::decode(data.token_id.clone()).unwrap();

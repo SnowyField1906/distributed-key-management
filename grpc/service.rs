@@ -38,16 +38,27 @@ lazy_static! {
     pub static ref INDEX: usize = env::args().nth(1).unwrap().parse().unwrap();
 }
 
-pub async fn broadcast_all() {
+pub async fn broadcast_all() -> Result<(), messages::Error> {
     for node in 0..constants::N_NODES {
-        if node != *INDEX {
-            NODES[node].broadcast_assign_key(
-                Request::new(BroadcastAssignKeyRequest {
-                    id: *INDEX as u32,
-                })
-            ).await.unwrap();
+        if node == *INDEX {
+            continue;
+        }
+        
+        match NODES[node].broadcast_assign_key(
+            Request::new(BroadcastAssignKeyRequest {
+                id: *INDEX as u32,
+            })
+        ).await {
+            Ok(_) => {},
+            Err(error) => {
+                return Err(messages::Error::new(
+                    format!("Error when broadcast_assign_key in {}\n{}", node, error).as_str(),
+                ));
+            }
         }
     }
+
+    Ok(())
 }
 
 pub async fn generate_shared_secret(owner: &str) -> Result<Wallet, messages::Error> {
@@ -172,7 +183,7 @@ pub async fn generate_shares(owner: &str) -> Result<bool, messages::Error> {
             ).await {
                 Ok(_) => {},
                 Err(error) => Err(messages::Error::new(
-                    format!("Error when add_received_share in {}\n{}", node, error),
+                    format!("Error when add_received_share in {}\n{}", node, error).as_str(),
                 ))?,
             }
 

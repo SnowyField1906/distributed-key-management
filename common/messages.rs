@@ -33,7 +33,7 @@ impl Error {
         self.message
     }
 
-    pub fn new(message: &'static str) -> Error {
+    pub fn new(message: &str) -> Error {
         Error {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             message,
@@ -85,4 +85,8 @@ pub const GENERATE_SHARES_FAILED: Error = Error {
 pub const DERIVE_SHARED_SECRET_FAILED: Error = Error {
     status: StatusCode::INTERNAL_SERVER_ERROR,
     message: "Derive Shared Secret failed"
+};
+pub const OK: Error = Error {
+    status: StatusCode::OK,
+    message: "OK",
 };

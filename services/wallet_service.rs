@@ -12,7 +12,7 @@ async fn this() -> Collection<Wallet> {
     collection("wallet").await
 }
 
-pub async fn create(owner: String, pub_key: String, address: String) -> Result<(), messages::Error> {
+pub async fn create(owner: String, pub_key: String, address: String) -> Result<Wallet, messages::Error> {
     let this: Collection<Wallet> = this().await;
 
     let new_wallet: Wallet = Wallet {
@@ -22,11 +22,8 @@ pub async fn create(owner: String, pub_key: String, address: String) -> Result<(
         address,
     };
 
-    match this.insert_one(new_wallet, None).await {
-        Ok(res) => {
-            print!("Created wallet: {:?}", res.inserted_id);
-            Ok(())
-        },
+    match this.insert_one(&new_wallet, None).await {
+        Ok(_) => Ok(new_wallet),
         _ => Err(messages::WALLET_EXISTED),
     }
 }

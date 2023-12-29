@@ -7,7 +7,7 @@ use validator::{
 use crate::common::constants::VERIFIERS;
 
 #[derive(Validate, Debug, Deserialize, Serialize)]
-pub struct AssignKey {
+pub struct AssignKeyDto {
     #[validate(email)]
     email: String,
     #[validate(custom = "is_allowed_verifier")]

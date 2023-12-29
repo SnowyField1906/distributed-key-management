@@ -8,7 +8,7 @@ use serde::{
 };
 
 #[derive(Serialize, Deserialize)]
-pub struct KeyIndex {
+pub struct KeyAssignment {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
     pub index: String,
