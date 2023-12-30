@@ -52,7 +52,7 @@ pub async fn broadcast_all() -> Result<(), messages::Error> {
             Ok(_) => {},
             Err(error) => {
                 return Err(messages::Error::new(
-                    format!("Error when broadcast_assign_key in {}\n{}", node, error).as_str(),
+                    format!("Error when broadcast_assign_key in {}\n{}", node, error)
                 ));
             }
         }
@@ -78,7 +78,7 @@ pub async fn generate_shared_secret(owner: &str) -> Result<Wallet, messages::Err
             },
             Err(error) => {
                 return Err(messages::Error::new(
-                    format!("Error when init_secret in {}\n{}", node, error).as_str(),
+                    format!("Error when init_secret in {}\n{}", node, error)
                 ));
             }
         }
@@ -96,7 +96,7 @@ pub async fn generate_shared_secret(owner: &str) -> Result<Wallet, messages::Err
             Ok(_) => {},
             Err(error) => {
                 return Err(messages::Error::new(
-                    format!("Error when generate_shares in {}\n{}", node, error).as_str(),
+                    format!("Error when generate_shares in {}\n{}", node, error)
                 ));
             }
         }
@@ -114,7 +114,7 @@ pub async fn generate_shared_secret(owner: &str) -> Result<Wallet, messages::Err
             Ok(_) => {},
             Err(error) => {
                 return Err(messages::Error::new(
-                    format!("Error when derive_shared_secret in {}\n{}", node, error).as_str(),
+                    format!("Error when derive_shared_secret in {}\n{}", node, error)
                 ));
             }
         }
@@ -146,7 +146,7 @@ pub async fn generate_shared_secret(owner: &str) -> Result<Wallet, messages::Err
             Ok(_) => {},
             Err(error) => {
                 return Err(messages::Error::new(
-                    format!("Error when store_wallet_info in {}\n{}", node, error).as_str(),
+                    format!("Error when store_wallet_info in {}\n{}", node, error)
                 ));
             }
         }
@@ -183,7 +183,7 @@ pub async fn generate_shares(owner: &str) -> Result<bool, messages::Error> {
             ).await {
                 Ok(_) => {},
                 Err(error) => Err(messages::Error::new(
-                    format!("Error when add_received_share in {}\n{}", node, error).as_str(),
+                    format!("Error when add_received_share in {}\n{}", node, error)
                 ))?,
             }
 

@@ -40,7 +40,7 @@ pub async fn create(owner: String, pub_key: String, address: String) -> Result<W
 //     }
 // }
 
-pub async fn find_by_owner(owner: String) -> Result<Wallet, messages::Error> {
+pub async fn find_by_owner(owner: &String) -> Result<Wallet, messages::Error> {
     let this: Collection<Wallet> = this().await;
 
     match this.find_one(
@@ -55,7 +55,7 @@ pub async fn find_by_owner(owner: String) -> Result<Wallet, messages::Error> {
     }
 }
 
-pub async fn find_by_address(address: String) -> Result<Wallet, messages::Error> {
+pub async fn find_by_address(address: &String) -> Result<Wallet, messages::Error> {
     let this: Collection<Wallet> = this().await;
 
     match this.find_one(

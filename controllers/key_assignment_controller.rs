@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[post("key-assignment")]
-async fn broadcast_all(data: web::Json<AssignKeyDto>) -> HttpResponse {
+pub async fn broadcast_all(data: web::Json<AssignKeyDto>) -> HttpResponse {
     let data: AssignKeyDto = data.into_inner();
     
     match service::broadcast_all().await {

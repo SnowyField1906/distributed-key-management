@@ -18,6 +18,7 @@ use crate::{
     services::{
         shared_key_service,
         commitment_service,
+        wallet_service,
     },
     common::{
         messages,
@@ -26,18 +27,22 @@ use crate::{
 };
 
 #[post("shared-key")]
-async fn lookup_shared_secret(data: web::Json<LookupSharedSecretDto>) -> HttpResponse {
+pub async fn lookup_shared_secret(data: web::Json<LookupSharedSecretDto>) -> HttpResponse {
     let data: LookupSharedSecretDto = data.into_inner();
     
     let token_id: &mut Vec<u8> = &mut hex::decode(data.token_id.clone()).unwrap();
     
     crypto::create_keccak256(token_id);
 
-    if commitment_service::find(&hex::encode(token_id)).await.is_err() {
-        return messages::COMMITMENT_NOT_FOUND.get_response();
+    match commitment_service::find(&hex::encode(token_id)).await {
+        Ok(_) => {},
+        Err(error) => return error.get_response(),
     }
 
-    // TODO: find wallet
+    match wallet_service::find_by_owner(&data.owner).await {
+        Ok(_) => {},
+        Err(error) => return error.get_response(),
+    }
 
     let secp: Secp256k1<All> = Secp256k1::new();
     let raw_priv_key: String = dotenv::var("PRIVATE_KEY").unwrap();

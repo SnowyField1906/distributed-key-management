@@ -66,7 +66,7 @@ impl P2p for P2PController {
     ) -> Result<Response<CheckWalletResponse>, Status> {
         let data: CheckWalletRequest = data.into_inner();
 
-        match wallet_service::find_by_owner(data.email).await {
+        match wallet_service::find_by_owner(&data.email).await {
             Ok(wallet) => Ok(
                 Response::new(CheckWalletResponse { 
                     pub_key: wallet.pub_key,

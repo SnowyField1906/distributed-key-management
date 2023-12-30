@@ -12,16 +12,16 @@ pub struct Error {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Body {
     code: u16,
-    name: &'static str,
-    message: &'static str,
+    name: String,
+    message: String,
 }
 
 impl Error {
     pub fn get_body(&self) -> Body {
         Body {
             code: self.status.as_u16(),
-            name: self.status.canonical_reason().unwrap(),
-            message: self.message,
+            name: self.status.canonical_reason().unwrap().to_string(),
+            message: self.message.to_string(),
         }
     }
 
@@ -29,14 +29,14 @@ impl Error {
         HttpResponse::build(self.status).json(self.get_body())
     }
 
-    pub fn get_message(&self) -> &'static str {
-        self.message
+    pub fn get_message(&self) -> String {
+        self.message.to_string()
     }
 
-    pub fn new(message: &str) -> Error {
+    pub fn new(message: String) -> Error {
         Error {
             status: StatusCode::INTERNAL_SERVER_ERROR,
-            message,
+            message: Box::leak(message.into_boxed_str()),
         }
     }
 }

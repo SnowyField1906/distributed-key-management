@@ -19,8 +19,14 @@ use actix_web::{
 use futures::FutureExt;
 use mongodb::Database;
 use dotenv::dotenv;
-use config::{ db, app };
-use std::{ env, path };
+use std::{
+    env,
+    path
+};
+use crate::config::{
+    db,
+    app
+};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -38,17 +44,16 @@ async fn main() -> std::io::Result<()> {
     dotenv::from_path(env_path.as_path()).ok();
 
     let client: Database = db::database().await;
-    let app_url: String = dotenv::var("URL").unwrap();
+    let host: String = dotenv::var("HOST").unwrap();
+    let http_port: String = dotenv::var("HTTP_PORT").unwrap();
 
-    println!("Server is running on node {} at {}", node, app_url);
+    println!("HTTP Server listening on http://{}:{}", host, http_port);
 
     HttpServer::new(move || {
         App::new()
             .configure(app::config_services)
             .wrap(
                 Cors::default()
-                    .allowed_origin("http://127.0.0.1:3000")
-                    .allowed_origin("http://localhost:3000")
                     .send_wildcard()
                     .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
                     .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
@@ -58,7 +63,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(client.clone()))
             .wrap_fn(|req, srv| srv.call(req).map(|res| res))
     })
-    .bind(&app_url)?
-    .run()
-    .await
+        .bind(&format!("{}:{}", host, http_port))?
+        .run()
+        .await
 }
