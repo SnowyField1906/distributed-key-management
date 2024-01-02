@@ -49,7 +49,7 @@ pub async fn create_commitment(data: web::Json<CreateCommitmentDto>) -> HttpResp
     HttpResponse::Ok().json(NodeCommitmentDto {
         data: raw_data,
         signature: signature.serialize_der().to_string(),
-        pub_key: crypto::pub_key_to_string(&pub_key),
+        pub_key: crypto::pub_key_to_str(&pub_key),
     })
 }
 

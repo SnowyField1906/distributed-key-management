@@ -6,12 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
-name = "http_server"
-path = "http_server.rs"
+name = "server"
+path = "server.rs"
 
 [[bin]]
-name = "grpc_server"
-path = "grpc_server.rs"
+name = "client"
+path = "client.rs"
 
 
 [dependencies]
@@ -39,7 +39,10 @@ prost-types = "0.12.3"
 tonic-build = "0.10.2"
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 num-traits = "0.2.17"
-tokio = "1.35.1"
+tokio = { version = "1.35.1", features = ["full"] }
+reqwest = { version = "0.11.23", features = ["json"] }
+to_unit = "1.0.2"
+retrieve = "1.1.2"
 
 [dependencies.mongodb]
 version = "2.2.0"

@@ -7,6 +7,4 @@ use validator::Validate;
 pub struct LookupWalletDto {
     #[validate(length(min = 1))]
     pub owner: String,
-    pub address: String,
-    pub pub_key: String,
 }

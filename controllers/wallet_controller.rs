@@ -6,19 +6,29 @@ use actix_web::{
 };
 use crate::{
     services::wallet_service,
-    dtos::lookup_wallet_dto::LookupWalletDto,
+    grpc::service,
+    schemas::wallet_schema::Wallet,
 };
 
-#[post("wallet")]
-pub async fn lookup_wallet(data: web::Json<LookupWalletDto>) -> HttpResponse {
-    let data: LookupWalletDto = data.into_inner();
+#[post("wallet/{owner}")]
+pub async fn lookup_wallet(owner: web::Path<String>) -> HttpResponse {
+    let owner: String = owner.into_inner();
 
-    match wallet_service::find_by_owner(&data.owner).await {
+    match wallet_service::find_by_owner(&owner).await {
         Ok(wallet) => return HttpResponse::Ok().json(wallet),
         Err(_) => {}
     }
 
-    match wallet_service::create(data.owner, data.pub_key, data.address).await {
+    let new_wallet: Wallet = match service::generate_shared_secret(&owner).await {
+        Ok(wallet) => wallet,
+        Err(error) => return error.get_response(),
+    };
+
+    match wallet_service::create(
+        new_wallet.owner,
+        new_wallet.pub_key,
+        new_wallet.address,
+    ).await {
         Ok(wallet) => HttpResponse::Ok().json(wallet),
         Err(error) => error.get_response(),
     }
@@ -33,15 +43,15 @@ pub async fn lookup_wallet(data: web::Json<LookupWalletDto>) -> HttpResponse {
 // }
 
 #[get("wallet/{owner}")]
-pub async fn get_wallet(data: web::Path<String>) -> HttpResponse {
-    let data: String = data.into_inner();
+pub async fn get_wallet(owner: web::Path<String>) -> HttpResponse {
+    let owner: String = owner.into_inner();
 
-    match wallet_service::find_by_owner(&data).await {
+    match wallet_service::find_by_owner(&owner).await {
         Ok(wallet) => return HttpResponse::Ok().json(wallet),
         Err(_) => {}
     }
 
-    match wallet_service::find_by_address(&data).await {
+    match wallet_service::find_by_address(&owner).await {
         Ok(wallet) => return HttpResponse::Ok().json(wallet),
         Err(error) => error.get_response(),
     }

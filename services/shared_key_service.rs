@@ -28,7 +28,7 @@ pub async fn create(owner: &str) -> Result<PublicKey, messages::Error> {
 
     let new_shared_key: SharedKey = SharedKey {
         id: None,
-        secret: crypto::priv_key_to_string(&priv_key),
+        secret: crypto::priv_key_to_str(&priv_key),
         owner: owner.to_string(),
         received_shares: vec![],
         shared_secret: None,

@@ -35,7 +35,7 @@ impl P2p for P2PController {
         match shared_key_service::create(&data.owner).await {
             Ok(pub_key) => Ok(
                 Response::new(InitSecretResponse {
-                    pub_key: crypto::pub_key_to_string(&pub_key)
+                    pub_key: crypto::pub_key_to_str(&pub_key)
                 })
             ),
             Err(error) => Err(

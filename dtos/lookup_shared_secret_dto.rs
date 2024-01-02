@@ -4,7 +4,7 @@ use serde::{
 use validator::Validate;
 use crate::dtos::node_commitment_dto::NodeCommitmentDto;
 
-#[derive(Validate, Debug, Serialize, Deserialize)]
+#[derive(Clone, Validate, Debug, Serialize, Deserialize)]
 pub struct LookupSharedSecretDto {
     #[validate(length(min = 1))]
     pub owner: String,

@@ -74,7 +74,7 @@ pub async fn generate_shared_secret(owner: &str) -> Result<Wallet, messages::Err
             })
         ).await {
             Ok(data) => {
-                keys.push(crypto::hex_to_biguint(data.into_inner().pub_key));
+                keys.push(crypto::hex_to_big_num(data.into_inner().pub_key));
             },
             Err(error) => {
                 return Err(messages::Error::new(
@@ -131,7 +131,7 @@ pub async fn generate_shared_secret(owner: &str) -> Result<Wallet, messages::Err
     let priv_key: SecretKey = SecretKey::from_slice(&shared_secret.to_bytes_be()).unwrap();
     let pub_key: PublicKey = priv_key.public_key(&secp);
 
-    let address: String = crypto::get_address(&crypto::biguint_to_hex(&shared_secret));
+    let address: String = crypto::get_addr_from_pub_key(&crypto::big_num_to_hex(&shared_secret));
 
     for node in 0..constants::N_NODES {
         let p2p = &NODES[node];
@@ -139,7 +139,7 @@ pub async fn generate_shared_secret(owner: &str) -> Result<Wallet, messages::Err
         match p2p.store_wallet_info(
             Request::new(StoreWalletInfoRequest {
                 owner: owner.to_string(),
-                pub_key: crypto::pub_key_to_string(&pub_key),
+                pub_key: crypto::pub_key_to_str(&pub_key),
                 address: address.clone(),
             })
         ).await {
@@ -155,7 +155,7 @@ pub async fn generate_shared_secret(owner: &str) -> Result<Wallet, messages::Err
     Ok(Wallet {
         id: None,
         owner: owner.to_string(),
-        pub_key: crypto::pub_key_to_string(&pub_key),
+        pub_key: crypto::pub_key_to_str(&pub_key),
         address: address.clone(),
     })
 }
@@ -168,7 +168,7 @@ pub async fn generate_shares(owner: &str) -> Result<bool, messages::Error> {
 
     let mut indices: Vec<u32> = [0].to_vec();
     let mut shares: Vec<BigUint> = [
-        crypto::hex_to_biguint(shared_key.secret),
+        crypto::hex_to_big_num(shared_key.secret),
     ].to_vec();
 
     for node in 0..constants::N_NODES {
@@ -178,7 +178,7 @@ pub async fn generate_shares(owner: &str) -> Result<bool, messages::Error> {
             match NODES[node].add_received_share(
                 Request::new(AddReceivedShareRequest {
                     owner: owner.to_string(),
-                    received_share: crypto::priv_key_to_string(&random_share),
+                    received_share: crypto::priv_key_to_str(&random_share),
                 })
             ).await {
                 Ok(_) => {},
@@ -187,7 +187,7 @@ pub async fn generate_shares(owner: &str) -> Result<bool, messages::Error> {
                 ))?,
             }
 
-            shares.push(crypto::hex_to_biguint(crypto::priv_key_to_string(&random_share)));
+            shares.push(crypto::hex_to_big_num(crypto::priv_key_to_str(&random_share)));
             indices.push(node as u32);
         } else {
             let point = crypto::interpolate(&shares, &indices, node as u32);
@@ -195,7 +195,7 @@ pub async fn generate_shares(owner: &str) -> Result<bool, messages::Error> {
             NODES[node].add_received_share(
                 Request::new(AddReceivedShareRequest {
                     owner: owner.to_string(),
-                    received_share: crypto::biguint_to_hex(&point.unwrap()),
+                    received_share: crypto::big_num_to_hex(&point.unwrap()),
                 })
             ).await.unwrap();
         }

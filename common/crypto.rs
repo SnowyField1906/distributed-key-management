@@ -16,36 +16,48 @@ use tiny_keccak::{
     Hasher
 };
 
+pub fn encrypt(pub_key: &PublicKey, message: Vec<u8>) -> String {
+    let encrypted: Vec<u8> = ecies::encrypt(&pub_key.serialize(), &message).unwrap();
+
+    hex::encode(encrypted)
+}
+
+pub fn decrypt(priv_key: &SecretKey, message: Vec<u8>) -> String {
+    let decrypted: Vec<u8> = ecies::decrypt(&priv_key.secret_bytes(), &message).unwrap();
+
+    hex::encode(decrypted)
+}
+
 pub fn generate_keypair() -> (SecretKey, PublicKey) {
     let secp: Secp256k1<All> = Secp256k1::new();
     secp.generate_keypair(&mut OsRng)
 }
 
-pub fn pub_key_to_string(key: &PublicKey) -> String {
+pub fn pub_key_to_str(key: &PublicKey) -> String {
     hex::encode(key.serialize())
 }
 
-pub fn priv_key_to_string(key: &SecretKey) -> String {
+pub fn priv_key_to_str(key: &SecretKey) -> String {
     hex::encode(key.secret_bytes())
 }
 
-pub fn string_to_pub_key(key: &str) -> PublicKey {
+pub fn str_to_pub_key(key: &str) -> PublicKey {
     PublicKey::from_slice(&hex::decode(key).unwrap()[..]).unwrap()
 }
 
-pub fn string_to_priv_key(key: &str) -> SecretKey {
+pub fn str_to_priv_key(key: &str) -> SecretKey {
     SecretKey::from_slice(&hex::decode(key).unwrap()[..]).unwrap()
 }
 
-pub fn hex_to_biguint(hex: String) -> BigUint {
+pub fn hex_to_big_num(hex: String) -> BigUint {
     BigUint::from_bytes_be(&hex::decode(hex).unwrap()[..])
 }
 
-pub fn biguint_to_hex(biguint: &BigUint) -> String {
-    hex::encode(biguint.to_bytes_be())
+pub fn big_num_to_hex(big: &BigUint) -> String {
+    hex::encode(big.to_bytes_be())
 }
 
-pub fn get_address(public_key: &str) -> String {
+pub fn get_addr_from_pub_key(public_key: &str) -> String {
     let formatted_public_key = &public_key[2..];
     let public_key_bytes = hex::decode(formatted_public_key).expect("Invalid hex");
 
@@ -66,6 +78,17 @@ pub fn get_address(public_key: &str) -> String {
     }
 
     checksum_address
+}
+
+pub fn get_addr_from_priv_key(private_key: &str) -> String {
+    let formatted_private_key = &private_key[2..];
+    let private_key_bytes = hex::decode(formatted_private_key).expect("Invalid hex");
+
+    let secp: Secp256k1<All> = Secp256k1::new();
+    let secret_key = SecretKey::from_slice(&private_key_bytes).unwrap();
+    let public_key = PublicKey::from_secret_key(&secp, &secret_key);
+
+    get_addr_from_pub_key(&pub_key_to_str(&public_key))
 }
 
 pub fn create_keccak256(data: &[u8]) -> String {
