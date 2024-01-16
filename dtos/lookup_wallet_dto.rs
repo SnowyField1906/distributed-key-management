@@ -1,10 +1,11 @@
 use serde::{
-    Deserialize, Serialize
+	Deserialize,
+	Serialize,
 };
 use validator::Validate;
 
 #[derive(Validate, Debug, Deserialize, Serialize)]
 pub struct LookupWalletDto {
-    #[validate(length(min = 1))]
-    pub owner: String,
+	#[validate(length(min = 1))]
+	pub owner: String,
 }

@@ -1,92 +1,92 @@
 use actix_web::{
-    http::StatusCode,
-    HttpResponse,
+	http::StatusCode,
+	HttpResponse,
 };
-use serde::{Deserialize, Serialize};
+use serde::{
+	Deserialize,
+	Serialize,
+};
 
 pub struct Error {
-    status: StatusCode,
-    message: &'static str,
+	status: StatusCode,
+	message: &'static str,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Body {
-    code: u16,
-    name: String,
-    message: String,
+	code: u16,
+	name: String,
+	message: String,
 }
 
 impl Error {
-    pub fn get_body(&self) -> Body {
-        Body {
-            code: self.status.as_u16(),
-            name: self.status.canonical_reason().unwrap().to_string(),
-            message: self.message.to_string(),
-        }
-    }
+	pub fn get_body(&self) -> Body {
+		Body {
+			code: self.status.as_u16(),
+			name: self.status.canonical_reason().unwrap().to_string(),
+			message: self.message.to_string(),
+		}
+	}
 
-    pub fn get_response(&self) -> HttpResponse {
-        HttpResponse::build(self.status).json(self.get_body())
-    }
+	pub fn get_response(&self) -> HttpResponse {
+		HttpResponse::build(self.status).json(self.get_body())
+	}
 
-    pub fn get_message(&self) -> String {
-        self.message.to_string()
-    }
+	pub fn get_message(&self) -> String { self.message.to_string() }
 
-    pub fn new(message: String) -> Error {
-        Error {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            message: Box::leak(message.into_boxed_str()),
-        }
-    }
+	pub fn new(message: String) -> Error {
+		Error {
+			status: StatusCode::INTERNAL_SERVER_ERROR,
+			message: Box::leak(message.into_boxed_str()),
+		}
+	}
 }
 
-
 pub const COMMITMENT_NOT_FOUND: Error = Error {
-    status: StatusCode::NOT_FOUND,
-    message: "The Commitment is not found"
+	status: StatusCode::NOT_FOUND,
+	message: "The Commitment is not found",
 };
 pub const COMMITMENT_EXISTED: Error = Error {
-    status: StatusCode::CONFLICT,
-    message: "The Commitment already existed"
+	status: StatusCode::CONFLICT,
+	message: "The Commitment already existed",
 };
 pub const SHARED_KEY_NOT_FOUND: Error = Error {
-    status: StatusCode::NOT_FOUND,
-    message: "The Shared Key is not found"
+	status: StatusCode::NOT_FOUND,
+	message: "The Shared Key is not found",
 };
 pub const SHARED_KEY_EXISTED: Error = Error {
-    status: StatusCode::CONFLICT,
-    message: "The Shared Key already existed"
+	status: StatusCode::CONFLICT,
+	message: "The Shared Key already existed",
 };
 pub const VERIFIER_NOT_SUPPORT: Error = Error {
-    status: StatusCode::BAD_REQUEST,
-    message: "This Verifier is not supported"
+	status: StatusCode::BAD_REQUEST,
+	message: "This Verifier is not supported",
 };
 pub const INVALID_NODE_SIGNATURE: Error = Error {
-    status: StatusCode::BAD_REQUEST,
-    message: "The Node Signature is invalid"
+	status: StatusCode::BAD_REQUEST,
+	message: "The Node Signature is invalid",
 };
 pub const WALLET_EXISTED: Error = Error {
-    status: StatusCode::CONFLICT,
-    message: "The Wallet already existed"
+	status: StatusCode::CONFLICT,
+	message: "The Wallet already existed",
 };
 pub const WALLET_NOT_FOUND: Error = Error {
-    status: StatusCode::NOT_FOUND,
-    message: "The Wallet is not found"
+	status: StatusCode::NOT_FOUND,
+	message: "The Wallet is not found",
 };
 pub const INIT_SHARED_SECRET_FAILED: Error = Error {
-    status: StatusCode::INTERNAL_SERVER_ERROR,
-    message: "Init Shared Secret failed"
+	status: StatusCode::INTERNAL_SERVER_ERROR,
+	message: "Init Shared Secret failed",
 };
 pub const GENERATE_SHARES_FAILED: Error = Error {
-    status: StatusCode::INTERNAL_SERVER_ERROR,
-    message: "Generate Shares failed"
+	status: StatusCode::INTERNAL_SERVER_ERROR,
+	message: "Generate Shares failed",
 };
 pub const DERIVE_SHARED_SECRET_FAILED: Error = Error {
-    status: StatusCode::INTERNAL_SERVER_ERROR,
-    message: "Derive Shared Secret failed"
+	status: StatusCode::INTERNAL_SERVER_ERROR,
+	message: "Derive Shared Secret failed",
 };
 pub const OK: Error = Error {
-    status: StatusCode::OK,
-    message: "OK",
+	status: StatusCode::OK,
+	message: "OK",
 };

@@ -8,126 +8,135 @@ mod services;
 // mod utils;
 // mod verifier;
 
-use tonic::transport;
-use actix_web::{
-    web::Data,
-    App,
-    HttpServer,
-    dev::Service
-};
-use futures::{
-    future::{
-        self,
-        Future,
-        join,
-        ok,
-        abortable,
-    },
-    FutureExt,
-};
-use tokio::signal::ctrl_c;
-use to_unit::ToUnit;
-use mongodb::Database;
-use dotenv::dotenv;
 use std::{
-    env,
-    path,
-    cmp,
-    io
+	cmp,
+	env,
+	io,
+	path,
+	sync::Arc,
 };
+
+use actix_web::{
+	dev::Service,
+	web::Data,
+	App,
+	HttpServer,
+};
+use config::database;
+use dotenv::dotenv;
+use futures::{
+	future::{
+		self,
+		abortable,
+		join,
+		ok,
+		Future,
+	},
+	FutureExt,
+};
+use mongodb::Database;
+use to_unit::ToUnit;
+use tokio::signal::ctrl_c;
+use tonic::transport;
+
 use crate::{
-    config::{
-        db,
-        app
-    },
-    grpc::controller
+	config::{
+		app,
+		database::DatabasePool,
+		microservice::GrpcPool,
+	},
+	grpc::controller,
 };
 
-async fn tokio_main(tonic_future: impl Future<Output = Result<(), transport::Error>>) -> Result<(), transport::Error> {
-    let (f_tonic, aborter) = abortable(tonic_future);
+async fn tokio_main(
+	tonic_future: impl Future<Output = Result<(), transport::Error>>,
+) -> Result<(), transport::Error> {
+	let (f_tonic, aborter) = abortable(tonic_future);
 
-    let f_sigint = async move {
-        ctrl_c().await.to_unit();
-        aborter.abort();
-    };
+	let f_sigint = async move {
+		ctrl_c().await.to_unit();
+		aborter.abort();
+	};
 
-    let r = join(f_tonic, f_sigint).await;
-    match r.0 {
-        Ok(Err(e_tonic)) => Err(e_tonic),
-        _ => Ok(())
-    }
+	let r = join(f_tonic, f_sigint).await;
+	match r.0 {
+		Ok(Err(e_tonic)) => Err(e_tonic),
+		_ => Ok(()),
+	}
 }
 
 async fn actix_main(actix_future: impl Future<Output = Result<(), io::Error>>) -> io::Result<()> {
-    let fake_future = ok::<(), ()>(());
-    let r = join(actix_future, fake_future);
-    
-    r.await.0
+	let fake_future = ok::<(), ()>(());
+	let r = join(actix_future, fake_future);
+
+	r.await.0
 }
 
 fn formatted_log(str1: String, str2: String) {
-    let max_len = cmp::max(str1.len(), str2.len());
-    let horizontal_line = format!("+-{}-+", "-".repeat(max_len));
+	let max_len = cmp::max(str1.len(), str2.len());
+	let horizontal_line = format!("+-{}-+", "-".repeat(max_len));
 
-    print!(
-        "{}\n{}\n{}\n{}\n",
-        horizontal_line,
-        format!("| {}{}{} |", "\x1b[32m", str1, "\x1b[0m"),
-        format!("| {}{}{} |", "\x1b[32m", str2, "\x1b[0m"),
-        horizontal_line
-    )
+	print!(
+		"{}\n{}\n{}\n{}\n",
+		horizontal_line,
+		format!("| {}{}{} |", "\x1b[32m", str1, "\x1b[0m"),
+		format!("| {}{}{} |", "\x1b[32m", str2, "\x1b[0m"),
+		horizontal_line
+	)
 }
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
-    env::set_var("RUST_LOG", "actix_web=debug,actix_server=info");
-    env_logger::init();
-    dotenv().ok();
+	env::set_var("RUST_LOG", "actix_web=debug,actix_server=info");
+	env_logger::init();
+	dotenv().ok();
 
-    let node: usize = env::args().nth(1).unwrap().parse().unwrap();
+	let node: usize = env::args().nth(1).unwrap().parse().unwrap();
 
-    let env_path: path::PathBuf = env::current_dir().and_then(|a| Ok(a
-        .join("config")
-        .join("node_info")
-        .join(format!("node{}.env", node))
-    )).unwrap();
-    dotenv::from_path(env_path.as_path()).ok();
+	let env_path: path::PathBuf = env::current_dir()
+		.and_then(|a| Ok(a.join("config").join("node_info").join(format!("node{}.env", node))))
+		.unwrap();
+	dotenv::from_path(env_path.as_path()).ok();
 
+	let database_pool = DatabasePool::new().await;
+	let grpc_pool = GrpcPool::new().await;
+	let database_data = Data::new(database_pool);
+	let grpc_data = Data::new(grpc_pool);
 
-    let client: Database = db::database().await;
-    let host: String = dotenv::var("HOST").unwrap();
-    let http_port: String = dotenv::var("HTTP_PORT").unwrap();
-    let grpc_port: String = dotenv::var("GRPC_PORT").unwrap();
+	let host: String = dotenv::var("HOST").unwrap();
+	let http_port: String = dotenv::var("HTTP_PORT").unwrap();
+	let grpc_port: String = dotenv::var("GRPC_PORT").unwrap();
 
-    formatted_log(
-        format!("HTTP Server listening on http://{}:{}", host, http_port),
-        format!("GRPC Server listening on http://{}:{}", host, grpc_port)
-    );
+	formatted_log(
+		format!("HTTP Server listening on http://{}:{}", host, http_port),
+		format!("GRPC Server listening on http://{}:{}", host, grpc_port),
+	);
 
-    let http_server = HttpServer::new(move || {
-        App::new()
-            .configure(app::config_services)
-            .app_data(Data::new(client.clone()))
-            .wrap_fn(|req, srv| srv.call(req).map(|res| res))
-        })
-        .bind(&format!("{}:{}", host, http_port))
-        .unwrap()
-        .run();
+	let http_server = HttpServer::new(move || {
+		App::new()
+			.configure(app::config_services)
+			.app_data(database_data)
+			.app_data(grpc_data)
+			.wrap_fn(|req, srv| srv.call(req).map(|res| res))
+	})
+	.bind(&format!("{}:{}", host, http_port))
+	.unwrap()
+	.run();
 
-    let grpc_server = transport::Server::builder()
-        .add_service(controller::P2PController::new())
-        .serve(format!("{}:{}", host, grpc_port).parse().unwrap());
+	let grpc_server = transport::Server::builder()
+		.add_service(controller::P2PController::new())
+		.serve(format!("{}:{}", host, grpc_port).parse().unwrap());
 
-    let r_actix = actix_main(http_server);
-    let r_tokio = tokio_main(grpc_server);
-    
-    let r = future::join(r_actix, r_tokio).await;
-    match r {
-        (Ok(..), Ok(..)) => {},
-        _ => {
-            panic!("Error when running servers");
-        }
-    };
+	let r_actix = actix_main(http_server);
+	let r_tokio = tokio_main(grpc_server);
 
-    Ok(())
+	let r = future::join(r_actix, r_tokio).await;
+	match r {
+		(Ok(..), Ok(..)) => {}
+		_ => {
+			panic!("Error when running servers");
+		}
+	};
+
+	Ok(())
 }
