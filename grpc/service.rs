@@ -46,9 +46,13 @@ lazy_static! {
 	pub static ref INDEX: usize = env::args().nth(1).unwrap().parse().unwrap();
 }
 
-pub async fn broadcast_all(
-	p2p: &mut [RwLockWriteGuard<'_, P2pClient<Channel>>; constants::N_NODES],
-) -> Result<(), messages::Error> {
+pub async fn broadcast_all(grpc_pool: &Data<Arc<GrpcPool>>) -> Result<(), messages::Error> {
+	let p2p: &mut [RwLockWriteGuard<'_, P2pClient<Channel>>] = &mut [
+		grpc_pool.get_client_mut(Some(0)).await,
+		grpc_pool.get_client_mut(Some(1)).await,
+		grpc_pool.get_client_mut(Some(2)).await,
+	];
+
 	for node in 0..constants::N_NODES {
 		if node == *INDEX {
 			continue;
@@ -72,8 +76,14 @@ pub async fn broadcast_all(
 }
 
 pub async fn generate_shared_secret(
-	p2p: &mut [RwLockWriteGuard<'_, P2pClient<Channel>>; constants::N_NODES], owner: &str,
+	grpc_pool: &Data<Arc<GrpcPool>>, owner: &str,
 ) -> Result<Wallet, messages::Error> {
+	let p2p: &mut [RwLockWriteGuard<'_, P2pClient<Channel>>] = &mut [
+		grpc_pool.get_client_mut(Some(0)).await,
+		grpc_pool.get_client_mut(Some(1)).await,
+		grpc_pool.get_client_mut(Some(2)).await,
+	];
+
 	let mut keys: Vec<BigUint> = Vec::new();
 
 	// step 1: init secret
@@ -171,9 +181,14 @@ pub async fn generate_shared_secret(
 }
 
 pub async fn generate_shares(
-	database_pool: &Data<Arc<DatabasePool>>,
-	p2p: &mut [RwLockWriteGuard<'_, P2pClient<Channel>>; constants::N_NODES], owner: &str,
+	database_pool: &Data<Arc<DatabasePool>>, grpc_pool: &Data<Arc<GrpcPool>>, owner: &str,
 ) -> Result<bool, messages::Error> {
+	let p2p: &mut [RwLockWriteGuard<'_, P2pClient<Channel>>] = &mut [
+		grpc_pool.get_client_mut(Some(0)).await,
+		grpc_pool.get_client_mut(Some(1)).await,
+		grpc_pool.get_client_mut(Some(2)).await,
+	];
+
 	let shared_key: SharedKey = match shared_key_service::find_by_owner(&database_pool, owner).await
 	{
 		Ok(shared_key) => shared_key,

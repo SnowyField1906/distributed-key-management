@@ -17,6 +17,7 @@ pub mod p2p {
 
 use p2p::p2p_client::P2pClient;
 
+#[derive(Debug, Default)]
 pub struct GrpcPool {
 	clients: Vec<RwLock<P2pClient<Channel>>>,
 	index: usize,
@@ -26,8 +27,9 @@ impl GrpcPool {
 	pub async fn new() -> Self {
 		let mut clients = Vec::with_capacity(N_NODES);
 
-		for _ in 0..N_NODES {
-			let client = P2pClient::connect(GRPC_URLS[0].parse::<String>().unwrap())
+		for node in 0..N_NODES {
+			println!("Connecting to url: {}", GRPC_URLS[node].parse::<String>().unwrap());
+			let client = P2pClient::connect(GRPC_URLS[node].parse::<String>().unwrap())
 				.await
 				.unwrap();
 			clients.push(RwLock::new(client));

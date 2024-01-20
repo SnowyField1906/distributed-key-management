@@ -22,7 +22,6 @@ use actix_web::{
 	App,
 	HttpServer,
 };
-use config::database;
 use dotenv::dotenv;
 use futures::{
 	future::{
@@ -34,7 +33,6 @@ use futures::{
 	},
 	FutureExt,
 };
-use mongodb::Database;
 use to_unit::ToUnit;
 use tokio::signal::ctrl_c;
 use tonic::transport;
@@ -98,10 +96,10 @@ async fn main() -> io::Result<()> {
 		.unwrap();
 	dotenv::from_path(env_path.as_path()).ok();
 
-	let database_pool = DatabasePool::new().await;
-	let grpc_pool = GrpcPool::new().await;
-	let database_data = Data::new(database_pool);
-	let grpc_data = Data::new(grpc_pool);
+	let database_pool: Arc<DatabasePool> = Arc::new(DatabasePool::new().await);
+	let database_data: Data<Arc<DatabasePool>> = Data::new(database_pool);
+	let grpc_pool: Arc<GrpcPool> = Arc::new(GrpcPool::new().await);
+	let grpc_data: Data<Arc<GrpcPool>> = Data::new(grpc_pool);
 
 	let host: String = dotenv::var("HOST").unwrap();
 	let http_port: String = dotenv::var("HTTP_PORT").unwrap();
@@ -112,20 +110,20 @@ async fn main() -> io::Result<()> {
 		format!("GRPC Server listening on http://{}:{}", host, grpc_port),
 	);
 
+	let grpc_server = transport::Server::builder()
+		.add_service(controller::P2PController::new(database_data.clone(), grpc_data.clone()).await)
+		.serve(format!("{}:{}", host, grpc_port).parse().unwrap());
+
 	let http_server = HttpServer::new(move || {
 		App::new()
 			.configure(app::config_services)
-			.app_data(database_data)
-			.app_data(grpc_data)
+			.app_data(database_data.clone())
+			.app_data(grpc_data.clone())
 			.wrap_fn(|req, srv| srv.call(req).map(|res| res))
 	})
 	.bind(&format!("{}:{}", host, http_port))
 	.unwrap()
 	.run();
-
-	let grpc_server = transport::Server::builder()
-		.add_service(controller::P2PController::new())
-		.serve(format!("{}:{}", host, grpc_port).parse().unwrap());
 
 	let r_actix = actix_main(http_server);
 	let r_tokio = tokio_main(grpc_server);

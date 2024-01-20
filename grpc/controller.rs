@@ -39,7 +39,7 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct P2PController {
 	database_pool: Data<Arc<DatabasePool>>,
-	p2p: Vec<RwLockWriteGuard<'static, P2pClient<Channel>>>,
+	grpc_pool: Data<Arc<GrpcPool>>,
 }
 
 #[tonic::async_trait]
@@ -62,7 +62,7 @@ impl P2p for P2PController {
 	async fn broadcast_all(
 		&self, data: Request<BroadcastAllRequest>,
 	) -> Result<Response<BroadcastAllResponse>, tonic::Status> {
-		match service::broadcast_all(&mut self.p2p).await {
+		match service::broadcast_all(&self.grpc_pool).await {
 			Ok(_) => Ok(Response::new(BroadcastAllResponse {})),
 			Err(error) => Err(Status::internal(error.get_message())),
 		}
@@ -73,7 +73,7 @@ impl P2p for P2PController {
 	) -> Result<Response<GenerateSharesResponse>, Status> {
 		let data: GenerateSharesRequest = data.into_inner();
 
-		match service::generate_shares(&self.database_pool, &mut self.p2p, &data.owner).await {
+		match service::generate_shares(&self.database_pool, &self.grpc_pool, &data.owner).await {
 			Ok(_) => Ok(Response::new(GenerateSharesResponse { status: true })),
 			Err(error) => Err(Status::internal(error.get_message())),
 		}
@@ -153,12 +153,8 @@ impl P2PController {
 		database_pool: Data<Arc<DatabasePool>>, grpc_pool: Data<Arc<GrpcPool>>,
 	) -> P2pServer<P2PController> {
 		P2pServer::new(P2PController {
-			database_pool: database_pool.clone(),
-			p2p: Vec::from([
-				grpc_pool.get_client_mut(0).await,
-				grpc_pool.get_client_mut(1).await,
-				grpc_pool.get_client_mut(2).await,
-			]),
+			database_pool,
+			grpc_pool,
 		})
 	}
 }

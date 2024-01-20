@@ -9,11 +9,15 @@ use actix_web::{
 	},
 	HttpResponse,
 };
+use tonic::Request;
 
 use crate::{
 	config::{
 		database::DatabasePool,
-		microservice::GrpcPool,
+		microservice::{
+			p2p::*,
+			GrpcPool,
+		},
 	},
 	grpc::service,
 	schemas::wallet_schema::Wallet,
