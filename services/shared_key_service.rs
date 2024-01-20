@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use actix_web::web::Data;
 use mongodb::{
 	bson::doc,
@@ -20,7 +22,7 @@ use crate::{
 };
 
 pub async fn create(
-	database_pool: Data<DatabasePool>, owner: &str,
+	database_pool: &Data<Arc<DatabasePool>>, owner: &str,
 ) -> Result<PublicKey, messages::Error> {
 	let this: Collection<SharedKey> = database_pool.get_collection_mut("shared_keys").await;
 
@@ -41,7 +43,7 @@ pub async fn create(
 }
 
 pub async fn find_by_owner(
-	database_pool: Data<DatabasePool>, owner: &str,
+	database_pool: &Data<Arc<DatabasePool>>, owner: &str,
 ) -> Result<SharedKey, messages::Error> {
 	let this: Collection<SharedKey> = database_pool.get_collection("shared_keys").await;
 
@@ -57,7 +59,7 @@ pub async fn find_by_owner(
 }
 
 pub async fn add_received_share(
-	database_pool: Data<DatabasePool>, owner: &str, received_share: &str,
+	database_pool: &Data<Arc<DatabasePool>>, owner: &str, received_share: &str,
 ) -> Result<(), messages::Error> {
 	let this: Collection<SharedKey> = database_pool.get_collection_mut("shared_keys").await;
 
@@ -75,7 +77,7 @@ pub async fn add_received_share(
 }
 
 pub async fn derive_shared_secret(
-	database_pool: Data<DatabasePool>, owner: &str,
+	database_pool: &Data<Arc<DatabasePool>>, owner: &str,
 ) -> Result<(), messages::Error> {
 	let this: Collection<SharedKey> = database_pool.get_collection_mut("shared_keys").await;
 

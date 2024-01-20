@@ -1,3 +1,6 @@
+use std::sync::Arc; // Add this line to import the Arc type
+
+use actix_web::web::Data;
 use mongodb::{
 	bson::doc,
 	Collection,
@@ -5,14 +8,15 @@ use mongodb::{
 
 use crate::{
 	common::messages,
+	config::database::DatabasePool,
 	dtos::create_commitment_dto::CreateCommitmentDto,
 	schemas::commitment_schema::Commitment,
 };
 
-async fn this() -> Collection<Commitment> { collection("commitments").await }
-
-pub async fn create(data: CreateCommitmentDto) -> Result<(), messages::Error> {
-	let this: Collection<Commitment> = this().await;
+pub async fn create(
+	database_pool: &Data<Arc<DatabasePool>>, data: CreateCommitmentDto,
+) -> Result<(), messages::Error> {
+	let this: Collection<Commitment> = database_pool.get_collection_mut("shared_keys").await;
 
 	let new_commitment: Commitment = Commitment {
 		id: None,
@@ -29,8 +33,10 @@ pub async fn create(data: CreateCommitmentDto) -> Result<(), messages::Error> {
 	}
 }
 
-pub async fn find(commitment: &str) -> Result<Commitment, messages::Error> {
-	let this: Collection<Commitment> = this().await;
+pub async fn find(
+	database_pool: &Data<Arc<DatabasePool>>, commitment: &str,
+) -> Result<Commitment, messages::Error> {
+	let this: Collection<Commitment> = database_pool.get_collection("shared_keys").await;
 
 	match this.find_one(doc! { "commitment": commitment }, None).await {
 		Ok(Some(res)) => Ok(res),

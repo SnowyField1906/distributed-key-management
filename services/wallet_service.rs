@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use actix_web::web::Data;
 use mongodb::{
 	bson::doc,
@@ -11,7 +13,7 @@ use crate::{
 };
 
 pub async fn create(
-	database_pool: Data<DatabasePool>, owner: String, pub_key: String, address: String,
+	database_pool: &Data<Arc<DatabasePool>>, owner: String, pub_key: String, address: String,
 ) -> Result<Wallet, messages::Error> {
 	let this: Collection<Wallet> = database_pool.get_collection_mut("wallet").await;
 
@@ -41,7 +43,7 @@ pub async fn create(
 // }
 
 pub async fn find_by_owner(
-	database_pool: Data<DatabasePool>, owner: &String,
+	database_pool: &Data<Arc<DatabasePool>>, owner: &String,
 ) -> Result<Wallet, messages::Error> {
 	let this: Collection<Wallet> = database_pool.get_collection("wallet").await;
 
@@ -57,7 +59,7 @@ pub async fn find_by_owner(
 }
 
 pub async fn find_by_address(
-	database_pool: Data<DatabasePool>, address: &String,
+	database_pool: &Data<Arc<DatabasePool>>, address: &String,
 ) -> Result<Wallet, messages::Error> {
 	let this: Collection<Wallet> = database_pool.get_collection("wallet").await;
 
@@ -73,7 +75,7 @@ pub async fn find_by_address(
 }
 
 pub async fn drop_all_by_owner(
-	database_pool: Data<DatabasePool>, owner: String,
+	database_pool: Data<Arc<DatabasePool>>, owner: String,
 ) -> Result<(), messages::Error> {
 	let this: Collection<Wallet> = database_pool.get_collection_mut("wallet").await;
 

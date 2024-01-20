@@ -1,6 +1,11 @@
+use std::sync::Arc;
+
 use actix_web::{
 	post,
-	web,
+	web::{
+		self,
+		Data,
+	},
 	HttpResponse,
 };
 use ecies::encrypt;
@@ -16,6 +21,7 @@ use crate::{
 		crypto,
 		messages,
 	},
+	config::database::DatabasePool,
 	dtos::{
 		lookup_shared_secret_dto::LookupSharedSecretDto,
 		node_shared_secret_dto::NodeSharedSecretDto,
@@ -28,19 +34,21 @@ use crate::{
 };
 
 #[post("shared-key")]
-pub async fn lookup_shared_secret(data: web::Json<LookupSharedSecretDto>) -> HttpResponse {
+pub async fn lookup_shared_secret(
+	database_pool: Data<Arc<DatabasePool>>, data: web::Json<LookupSharedSecretDto>,
+) -> HttpResponse {
 	let data: LookupSharedSecretDto = data.into_inner();
 
 	let token_id: &mut Vec<u8> = &mut hex::decode(data.token_id.clone()).unwrap();
 
 	crypto::create_keccak256(token_id);
 
-	match commitment_service::find(&hex::encode(token_id)).await {
+	match commitment_service::find(&database_pool, &hex::encode(token_id)).await {
 		Ok(_) => {}
 		Err(error) => return error.get_response(),
 	}
 
-	match wallet_service::find_by_owner(&data.owner).await {
+	match wallet_service::find_by_owner(&database_pool, &data.owner).await {
 		Ok(_) => {}
 		Err(error) => return error.get_response(),
 	}
@@ -60,7 +68,7 @@ pub async fn lookup_shared_secret(data: web::Json<LookupSharedSecretDto>) -> Htt
 		return messages::INVALID_NODE_SIGNATURE.get_response();
 	}
 
-	match shared_key_service::find_by_owner(&data.owner).await {
+	match shared_key_service::find_by_owner(&database_pool, &data.owner).await {
 		Ok(shared_key) => {
 			let shared_secret: String = shared_key.shared_secret.unwrap();
 

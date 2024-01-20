@@ -4,6 +4,7 @@ package p2p;
 
 service P2P {
     rpc InitSecret         (InitSecretRequest)         returns (InitSecretResponse)         {}
+    rpc BroadcastAll       (BroadcastAllRequest)       returns (BroadcastAllResponse)       {}
     rpc GenerateShares     (GenerateSharesRequest)     returns (GenerateSharesResponse)     {}
     rpc CheckWallet        (CheckWalletRequest)        returns (CheckWalletResponse)        {}
     rpc BroadcastAssignKey (BroadcastAssignKeyRequest) returns (BroadcastAssignKeyResponse) {}
@@ -20,6 +21,10 @@ message CheckWalletResponse {
     string pub_key = 1;
     string address = 2;
 }
+
+message BroadcastAllRequest {}
+
+message BroadcastAllResponse {}
 
 message BroadcastAssignKeyRequest {
     uint32 id = 1;

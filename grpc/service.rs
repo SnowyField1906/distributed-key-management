@@ -25,12 +25,15 @@ use crate::{
 		crypto,
 		messages,
 	},
-	config::microservice::{
-		p2p::{
-			p2p_client::P2pClient,
-			*,
+	config::{
+		database::DatabasePool,
+		microservice::{
+			p2p::{
+				p2p_client::P2pClient,
+				*,
+			},
+			GrpcPool,
 		},
-		GrpcPool,
 	},
 	schemas::{
 		shared_key_schema::SharedKey,
@@ -43,15 +46,15 @@ lazy_static! {
 	pub static ref INDEX: usize = env::args().nth(1).unwrap().parse().unwrap();
 }
 
-pub async fn broadcast_all(grpc_pool: Data<Arc<GrpcPool>>) -> Result<(), messages::Error> {
+pub async fn broadcast_all(
+	p2p: &mut [RwLockWriteGuard<'_, P2pClient<Channel>>; constants::N_NODES],
+) -> Result<(), messages::Error> {
 	for node in 0..constants::N_NODES {
 		if node == *INDEX {
 			continue;
 		}
 
-		let mut p2p = grpc_pool.get_client_mut(node).await;
-
-		match p2p
+		match p2p[node]
 			.broadcast_assign_key(Request::new(BroadcastAssignKeyRequest { id: *INDEX as u32 }))
 			.await
 		{
@@ -69,14 +72,8 @@ pub async fn broadcast_all(grpc_pool: Data<Arc<GrpcPool>>) -> Result<(), message
 }
 
 pub async fn generate_shared_secret(
-	grpc_pool: &mut Data<Arc<GrpcPool>>, owner: &str,
+	p2p: &mut [RwLockWriteGuard<'_, P2pClient<Channel>>; constants::N_NODES], owner: &str,
 ) -> Result<Wallet, messages::Error> {
-	let mut p2p: [_; constants::N_NODES] = [
-		grpc_pool.get_client_mut(0).await,
-		grpc_pool.get_client_mut(1).await,
-		grpc_pool.get_client_mut(2).await,
-	];
-
 	let mut keys: Vec<BigUint> = Vec::new();
 
 	// step 1: init secret
@@ -100,7 +97,20 @@ pub async fn generate_shared_secret(
 	}
 
 	// step 2: generate shares
-	generate_shares(&mut p2p, owner).await?;
+	match p2p[*INDEX]
+		.generate_shares(Request::new(GenerateSharesRequest {
+			owner: owner.to_string(),
+		}))
+		.await
+	{
+		Ok(_) => {}
+		Err(error) => {
+			return Err(messages::Error::new(format!(
+				"Error when generate_shares in {}\n{}",
+				*INDEX, error
+			)));
+		}
+	}
 
 	// step 3: derive shared secret key
 	for node in 0..constants::N_NODES {
@@ -161,9 +171,11 @@ pub async fn generate_shared_secret(
 }
 
 pub async fn generate_shares(
+	database_pool: &Data<Arc<DatabasePool>>,
 	p2p: &mut [RwLockWriteGuard<'_, P2pClient<Channel>>; constants::N_NODES], owner: &str,
 ) -> Result<bool, messages::Error> {
-	let shared_key: SharedKey = match shared_key_service::find_by_owner(owner).await {
+	let shared_key: SharedKey = match shared_key_service::find_by_owner(&database_pool, owner).await
+	{
 		Ok(shared_key) => shared_key,
 		Err(_) => return Ok(false),
 	};

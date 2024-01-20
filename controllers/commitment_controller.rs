@@ -1,7 +1,12 @@
+use std::sync::Arc;
+
 use actix_web::{
 	get,
 	post,
-	web,
+	web::{
+		self,
+		Data,
+	},
 	HttpResponse,
 };
 use secp256k1::{
@@ -19,6 +24,7 @@ use crate::{
 		crypto,
 		messages,
 	},
+	config::database::DatabasePool,
 	dtos::{
 		create_commitment_dto::CreateCommitmentDto,
 		node_commitment_dto::NodeCommitmentDto,
@@ -27,14 +33,19 @@ use crate::{
 };
 
 #[post("commitment")]
-pub async fn create_commitment(data: web::Json<CreateCommitmentDto>) -> HttpResponse {
+pub async fn create_commitment(
+	database_pool: Data<Arc<DatabasePool>>, data: web::Json<CreateCommitmentDto>,
+) -> HttpResponse {
 	let data: CreateCommitmentDto = data.into_inner();
 
-	if commitment_service::find(&data.commitment).await.is_ok() {
+	if commitment_service::find(&database_pool, &data.commitment)
+		.await
+		.is_ok()
+	{
 		return messages::COMMITMENT_EXISTED.get_response();
 	}
 
-	if let Err(err) = commitment_service::create(data.clone()).await {
+	if let Err(err) = commitment_service::create(&database_pool, data.clone()).await {
 		return err.get_response();
 	}
 
@@ -56,8 +67,10 @@ pub async fn create_commitment(data: web::Json<CreateCommitmentDto>) -> HttpResp
 }
 
 #[get("commitment/{commitment}")]
-pub async fn get_commitment(commitment: web::Path<String>) -> HttpResponse {
-	match commitment_service::find(&commitment.into_inner()).await {
+pub async fn get_commitment(
+	database_pool: Data<Arc<DatabasePool>>, commitment: web::Path<String>,
+) -> HttpResponse {
+	match commitment_service::find(&database_pool, &commitment.into_inner()).await {
 		Ok(result) => HttpResponse::Ok().json(result),
 		Err(err) => err.get_response(),
 	}

@@ -5,8 +5,13 @@ use mongodb::{
 };
 use tokio::sync::RwLock;
 
+#[derive(Debug)]
 pub struct DatabasePool {
 	database: RwLock<Database>,
+}
+
+impl Default for DatabasePool {
+	fn default() -> Self { tokio::runtime::Runtime::new().unwrap().block_on(DatabasePool::new()) }
 }
 
 impl DatabasePool {

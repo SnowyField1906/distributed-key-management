@@ -1,17 +1,33 @@
+use std::sync::Arc;
+
+use actix_web::web::Data;
+use tokio::sync::RwLockWriteGuard;
 use tonic::{
+	transport::Channel,
 	Request,
 	Response,
 	Status,
 };
 
 use crate::{
-	common::crypto,
-	config::microservice::p2p::{
-		p2p_server::{
-			P2p,
-			P2pServer,
+	common::{
+		constants,
+		crypto,
+		messages,
+	},
+	config::{
+		database::DatabasePool,
+		microservice::{
+			p2p::{
+				p2p_client::P2pClient,
+				p2p_server::{
+					P2p,
+					P2pServer,
+				},
+				*,
+			},
+			GrpcPool,
 		},
-		*,
 	},
 	grpc::service,
 	services::{
@@ -21,7 +37,10 @@ use crate::{
 };
 
 #[derive(Debug, Default)]
-pub struct P2PController {}
+pub struct P2PController {
+	database_pool: Data<Arc<DatabasePool>>,
+	p2p: Vec<RwLockWriteGuard<'static, P2pClient<Channel>>>,
+}
 
 #[tonic::async_trait]
 impl P2p for P2PController {
@@ -30,7 +49,7 @@ impl P2p for P2PController {
 	) -> Result<Response<InitSecretResponse>, tonic::Status> {
 		let data: InitSecretRequest = data.into_inner();
 
-		match shared_key_service::create(&data.owner).await {
+		match shared_key_service::create(&self.database_pool, &data.owner).await {
 			Ok(pub_key) => {
 				Ok(Response::new(InitSecretResponse {
 					pub_key: crypto::pub_key_to_str(&pub_key),
@@ -40,10 +59,24 @@ impl P2p for P2PController {
 		}
 	}
 
+	async fn broadcast_all(
+		&self, data: Request<BroadcastAllRequest>,
+	) -> Result<Response<BroadcastAllResponse>, tonic::Status> {
+		match service::broadcast_all(&mut self.p2p).await {
+			Ok(_) => Ok(Response::new(BroadcastAllResponse {})),
+			Err(error) => Err(Status::internal(error.get_message())),
+		}
+	}
+
 	async fn generate_shares(
 		&self, data: Request<GenerateSharesRequest>,
 	) -> Result<Response<GenerateSharesResponse>, Status> {
-		Ok(Response::new(GenerateSharesResponse { status: true }))
+		let data: GenerateSharesRequest = data.into_inner();
+
+		match service::generate_shares(&self.database_pool, &mut self.p2p, &data.owner).await {
+			Ok(_) => Ok(Response::new(GenerateSharesResponse { status: true })),
+			Err(error) => Err(Status::internal(error.get_message())),
+		}
 	}
 
 	async fn check_wallet(
@@ -51,7 +84,7 @@ impl P2p for P2PController {
 	) -> Result<Response<CheckWalletResponse>, Status> {
 		let data: CheckWalletRequest = data.into_inner();
 
-		match wallet_service::find_by_owner(&data.email).await {
+		match wallet_service::find_by_owner(&self.database_pool, &data.email).await {
 			Ok(wallet) => {
 				Ok(Response::new(CheckWalletResponse {
 					pub_key: wallet.pub_key,
@@ -78,7 +111,13 @@ impl P2p for P2PController {
 	) -> Result<Response<AddReceivedShareResponse>, Status> {
 		let data: AddReceivedShareRequest = data.into_inner();
 
-		match shared_key_service::add_received_share(&data.owner, &data.received_share).await {
+		match shared_key_service::add_received_share(
+			&self.database_pool,
+			&data.owner,
+			&data.received_share,
+		)
+		.await
+		{
 			Ok(_) => Ok(Response::new(AddReceivedShareResponse { status: true })),
 			Err(error) => Err(Status::internal(error.get_message())),
 		}
@@ -89,7 +128,7 @@ impl P2p for P2PController {
 	) -> Result<Response<DeriveSharedSecretResponse>, Status> {
 		let data: DeriveSharedSecretRequest = data.into_inner();
 
-		match shared_key_service::derive_shared_secret(&data.owner).await {
+		match shared_key_service::derive_shared_secret(&self.database_pool, &data.owner).await {
 			Ok(_) => Ok(Response::new(DeriveSharedSecretResponse { status: true })),
 			Err(error) => Err(Status::internal(error.get_message())),
 		}
@@ -100,7 +139,9 @@ impl P2p for P2PController {
 	) -> Result<Response<StoreWalletInfoResponse>, Status> {
 		let data: StoreWalletInfoRequest = data.into_inner();
 
-		match wallet_service::create(data.owner, data.pub_key, data.address).await {
+		match wallet_service::create(&self.database_pool, data.owner, data.pub_key, data.address)
+			.await
+		{
 			Ok(_) => Ok(Response::new(StoreWalletInfoResponse { status: true })),
 			Err(error) => Err(Status::internal(error.get_message())),
 		}
@@ -108,5 +149,16 @@ impl P2p for P2PController {
 }
 
 impl P2PController {
-	pub fn new() -> P2pServer<P2PController> { P2pServer::new(P2PController::default()) }
+	pub async fn new(
+		database_pool: Data<Arc<DatabasePool>>, grpc_pool: Data<Arc<GrpcPool>>,
+	) -> P2pServer<P2PController> {
+		P2pServer::new(P2PController {
+			database_pool: database_pool.clone(),
+			p2p: Vec::from([
+				grpc_pool.get_client_mut(0).await,
+				grpc_pool.get_client_mut(1).await,
+				grpc_pool.get_client_mut(2).await,
+			]),
+		})
+	}
 }

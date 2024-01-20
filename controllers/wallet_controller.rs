@@ -9,10 +9,12 @@ use actix_web::{
 	},
 	HttpResponse,
 };
-use mongodb::Database;
 
 use crate::{
-	config::microservice::GrpcPool,
+	config::{
+		database::DatabasePool,
+		microservice::GrpcPool,
+	},
 	grpc::service,
 	schemas::wallet_schema::Wallet,
 	services::wallet_service,
@@ -20,22 +22,22 @@ use crate::{
 
 #[post("wallet/{owner}")]
 pub async fn lookup_wallet(
-	grpc_pool: Data<Arc<GrpcPool>>, database_pool: Data<Database>, owner: Path<String>,
+	grpc_pool: Data<Arc<GrpcPool>>, database_pool: Data<Arc<DatabasePool>>, owner: Path<String>,
 ) -> HttpResponse {
 	let owner: String = owner.into_inner();
 
-	match wallet_service::find_by_owner(database_pool, &owner).await {
+	match wallet_service::find_by_owner(&database_pool, &owner).await {
 		Ok(wallet) => return HttpResponse::Ok().json(wallet),
 		Err(_) => {}
 	}
 
-	let new_wallet: Wallet = match service::generate_shared_secret(grpc_pool, &owner).await {
+	let new_wallet: Wallet = match service::generate_shared_secret(&grpc_pool, &owner).await {
 		Ok(wallet) => wallet,
 		Err(error) => return error.get_response(),
 	};
 
 	match wallet_service::create(
-		database_pool,
+		&database_pool,
 		new_wallet.owner,
 		new_wallet.pub_key,
 		new_wallet.address,
@@ -56,15 +58,17 @@ pub async fn lookup_wallet(
 // }
 
 #[get("wallet/{owner}")]
-pub async fn get_wallet(owner: Path<String>) -> HttpResponse {
+pub async fn get_wallet(
+	database_pool: Data<Arc<DatabasePool>>, owner: Path<String>,
+) -> HttpResponse {
 	let owner: String = owner.into_inner();
 
-	match wallet_service::find_by_owner(&owner).await {
+	match wallet_service::find_by_owner(&database_pool, &owner).await {
 		Ok(wallet) => return HttpResponse::Ok().json(wallet),
 		Err(_) => {}
 	}
 
-	match wallet_service::find_by_address(&owner).await {
+	match wallet_service::find_by_address(&database_pool, &owner).await {
 		Ok(wallet) => return HttpResponse::Ok().json(wallet),
 		Err(error) => error.get_response(),
 	}

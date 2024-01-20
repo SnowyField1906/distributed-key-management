@@ -1,3 +1,5 @@
+use std::env;
+
 use tokio::sync::{
 	RwLock,
 	RwLockReadGuard,
@@ -9,7 +11,6 @@ use crate::common::constants::{
 	GRPC_URLS,
 	N_NODES,
 };
-
 pub mod p2p {
 	tonic::include_proto!("p2p");
 }
@@ -18,6 +19,7 @@ use p2p::p2p_client::P2pClient;
 
 pub struct GrpcPool {
 	clients: Vec<RwLock<P2pClient<Channel>>>,
+	index: usize,
 }
 
 impl GrpcPool {
@@ -31,14 +33,20 @@ impl GrpcPool {
 			clients.push(RwLock::new(client));
 		}
 
-		GrpcPool { clients }
+		let index: usize = env::args().nth(1).unwrap().parse().unwrap();
+
+		GrpcPool { clients, index }
 	}
 
-	pub async fn get_client(&self, index: usize) -> RwLockReadGuard<'_, P2pClient<Channel>> {
-		self.clients[index].read().await
+	pub async fn get_client(
+		&self, index: Option<usize>,
+	) -> RwLockReadGuard<'_, P2pClient<Channel>> {
+		self.clients[index.unwrap_or(self.index)].read().await
 	}
 
-	pub async fn get_client_mut(&self, index: usize) -> RwLockWriteGuard<'_, P2pClient<Channel>> {
-		self.clients[index].write().await
+	pub async fn get_client_mut(
+		&self, index: Option<usize>,
+	) -> RwLockWriteGuard<'_, P2pClient<Channel>> {
+		self.clients[index.unwrap_or(self.index)].write().await
 	}
 }
