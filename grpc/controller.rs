@@ -39,7 +39,6 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct P2PController {
 	database_pool: Data<Arc<DatabasePool>>,
-	grpc_pool: Data<Arc<GrpcPool>>,
 }
 
 #[tonic::async_trait]
@@ -55,26 +54,6 @@ impl P2p for P2PController {
 					pub_key: crypto::pub_key_to_str(&pub_key),
 				}))
 			}
-			Err(error) => Err(Status::internal(error.get_message())),
-		}
-	}
-
-	async fn broadcast_all(
-		&self, data: Request<BroadcastAllRequest>,
-	) -> Result<Response<BroadcastAllResponse>, tonic::Status> {
-		match service::broadcast_all(&self.grpc_pool).await {
-			Ok(_) => Ok(Response::new(BroadcastAllResponse {})),
-			Err(error) => Err(Status::internal(error.get_message())),
-		}
-	}
-
-	async fn generate_shares(
-		&self, data: Request<GenerateSharesRequest>,
-	) -> Result<Response<GenerateSharesResponse>, Status> {
-		let data: GenerateSharesRequest = data.into_inner();
-
-		match service::generate_shares(&self.database_pool, &self.grpc_pool, &data.owner).await {
-			Ok(_) => Ok(Response::new(GenerateSharesResponse { status: true })),
 			Err(error) => Err(Status::internal(error.get_message())),
 		}
 	}
@@ -149,12 +128,7 @@ impl P2p for P2PController {
 }
 
 impl P2PController {
-	pub async fn new(
-		database_pool: Data<Arc<DatabasePool>>, grpc_pool: Data<Arc<GrpcPool>>,
-	) -> P2pServer<P2PController> {
-		P2pServer::new(P2PController {
-			database_pool,
-			grpc_pool,
-		})
+	pub async fn new(database_pool: Data<Arc<DatabasePool>>) -> P2pServer<P2PController> {
+		P2pServer::new(P2PController { database_pool })
 	}
 }

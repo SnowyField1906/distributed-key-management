@@ -28,8 +28,7 @@ impl GrpcPool {
 		let mut clients = Vec::with_capacity(N_NODES);
 
 		for node in 0..N_NODES {
-			println!("Connecting to url: {}", GRPC_URLS[node].parse::<String>().unwrap());
-			let client = P2pClient::connect(GRPC_URLS[node].parse::<String>().unwrap())
+			let client = P2pClient::connect(format!("http://{}", GRPC_URLS[node]))
 				.await
 				.unwrap();
 			clients.push(RwLock::new(client));

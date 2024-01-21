@@ -7,12 +7,7 @@ use actix_web::{
 use crate::controllers::*;
 
 #[get("/")]
-async fn ping() -> HttpResponse {
-	for i in 0..100000 {
-		println!("Hello {}", i);
-	}
-	HttpResponse::Ok().body("Pong")
-}
+async fn ping() -> HttpResponse { HttpResponse::Ok().body("Pong") }
 
 pub fn config_services(cfg: &mut web::ServiceConfig) {
 	cfg.service(ping).service(

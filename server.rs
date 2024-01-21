@@ -14,16 +14,20 @@ use std::{
 	io,
 	path,
 	sync::Arc,
+	thread,
+	time::Duration,
 };
 
 use actix_web::{
 	dev::Service,
+	rt,
 	web::Data,
 	App,
 	HttpServer,
 };
 use dotenv::dotenv;
 use futures::{
+	executor::block_on,
 	future::{
 		self,
 		abortable,
@@ -34,7 +38,10 @@ use futures::{
 	FutureExt,
 };
 use to_unit::ToUnit;
-use tokio::signal::ctrl_c;
+use tokio::{
+	net::unix::SocketAddr,
+	signal::ctrl_c,
+};
 use tonic::transport;
 
 use crate::{
@@ -45,30 +52,6 @@ use crate::{
 	},
 	grpc::controller,
 };
-
-async fn tokio_main(
-	tonic_future: impl Future<Output = Result<(), transport::Error>>,
-) -> Result<(), transport::Error> {
-	let (f_tonic, aborter) = abortable(tonic_future);
-
-	let f_sigint = async move {
-		ctrl_c().await.to_unit();
-		aborter.abort();
-	};
-
-	let r = join(f_tonic, f_sigint).await;
-	match r.0 {
-		Ok(Err(e_tonic)) => Err(e_tonic),
-		_ => Ok(()),
-	}
-}
-
-async fn actix_main(actix_future: impl Future<Output = Result<(), io::Error>>) -> io::Result<()> {
-	let fake_future = ok::<(), ()>(());
-	let r = join(actix_future, fake_future);
-
-	r.await.0
-}
 
 fn formatted_log(str1: String, str2: String) {
 	let max_len = cmp::max(str1.len(), str2.len());
@@ -96,45 +79,48 @@ async fn main() -> io::Result<()> {
 		.unwrap();
 	dotenv::from_path(env_path.as_path()).ok();
 
-	let database_pool: Arc<DatabasePool> = Arc::new(DatabasePool::new().await);
-	let database_data: Data<Arc<DatabasePool>> = Data::new(database_pool);
-	let grpc_pool: Arc<GrpcPool> = Arc::new(GrpcPool::new().await);
-	let grpc_data: Data<Arc<GrpcPool>> = Data::new(grpc_pool);
+	let grpc_server_thread = tokio::spawn(async move {
+		let host: String = dotenv::var("HOST").unwrap();
+		let grpc_port: String = dotenv::var("GRPC_PORT").unwrap();
 
-	let host: String = dotenv::var("HOST").unwrap();
-	let http_port: String = dotenv::var("HTTP_PORT").unwrap();
-	let grpc_port: String = dotenv::var("GRPC_PORT").unwrap();
+		block_on(async move {
+			let database_pool: Arc<DatabasePool> = Arc::new(DatabasePool::new().await);
+			let database_data: Data<Arc<DatabasePool>> = Data::new(database_pool);
 
-	formatted_log(
-		format!("HTTP Server listening on http://{}:{}", host, http_port),
-		format!("GRPC Server listening on http://{}:{}", host, grpc_port),
-	);
+			println!("starting grpc server at {}:{}", host, grpc_port);
 
-	let grpc_server = transport::Server::builder()
-		.add_service(controller::P2PController::new(database_data.clone(), grpc_data.clone()).await)
-		.serve(format!("{}:{}", host, grpc_port).parse().unwrap());
+			transport::Server::builder()
+				.add_service(controller::P2PController::new(database_data).await)
+				.serve(format!("{}:{}", host, grpc_port).parse().unwrap())
+		})
+	});
 
-	let http_server = HttpServer::new(move || {
-		App::new()
-			.configure(app::config_services)
-			.app_data(database_data.clone())
-			.app_data(grpc_data.clone())
-			.wrap_fn(|req, srv| srv.call(req).map(|res| res))
-	})
-	.bind(&format!("{}:{}", host, http_port))
-	.unwrap()
-	.run();
+	let http_server_thread = tokio::spawn(async move {
+		let host: String = dotenv::var("HOST").unwrap();
+		let http_port: String = dotenv::var("HTTP_PORT").unwrap();
 
-	let r_actix = actix_main(http_server);
-	let r_tokio = tokio_main(grpc_server);
+		block_on(async move {
+			let database_pool: Arc<DatabasePool> = Arc::new(DatabasePool::new().await);
+			let database_data: Data<Arc<DatabasePool>> = Data::new(database_pool);
 
-	let r = future::join(r_actix, r_tokio).await;
-	match r {
-		(Ok(..), Ok(..)) => {}
-		_ => {
-			panic!("Error when running servers");
-		}
-	};
+			let grpc_pool: Arc<GrpcPool> = Arc::new(GrpcPool::new().await);
+			let grpc_data: Data<Arc<GrpcPool>> = Data::new(grpc_pool);
+
+			HttpServer::new(move || {
+				App::new()
+					.configure(app::config_services)
+					.app_data(grpc_data.clone())
+					.app_data(database_data.clone())
+					.wrap_fn(|req, srv| srv.call(req).map(|res| res))
+			})
+			.bind(format!("{}:{}", host, http_port))
+			.unwrap()
+			.run()
+			.await
+		})
+	});
+
+	let _ = join(grpc_server_thread, http_server_thread).await;
 
 	Ok(())
 }

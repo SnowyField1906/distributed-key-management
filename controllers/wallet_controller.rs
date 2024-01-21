@@ -35,10 +35,11 @@ pub async fn lookup_wallet(
 		Err(_) => {}
 	}
 
-	let new_wallet: Wallet = match service::generate_shared_secret(&grpc_pool, &owner).await {
-		Ok(wallet) => wallet,
-		Err(error) => return error.get_response(),
-	};
+	let new_wallet: Wallet =
+		match service::generate_shared_secret(&database_pool, &grpc_pool, &owner).await {
+			Ok(wallet) => wallet,
+			Err(error) => return error.get_response(),
+		};
 
 	match wallet_service::create(
 		&database_pool,

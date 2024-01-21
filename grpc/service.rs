@@ -76,7 +76,7 @@ pub async fn broadcast_all(grpc_pool: &Data<Arc<GrpcPool>>) -> Result<(), messag
 }
 
 pub async fn generate_shared_secret(
-	grpc_pool: &Data<Arc<GrpcPool>>, owner: &str,
+	database_pool: &Data<Arc<DatabasePool>>, grpc_pool: &Data<Arc<GrpcPool>>, owner: &str,
 ) -> Result<Wallet, messages::Error> {
 	let p2p: &mut [RwLockWriteGuard<'_, P2pClient<Channel>>] = &mut [
 		grpc_pool.get_client_mut(Some(0)).await,
@@ -107,18 +107,10 @@ pub async fn generate_shared_secret(
 	}
 
 	// step 2: generate shares
-	match p2p[*INDEX]
-		.generate_shares(Request::new(GenerateSharesRequest {
-			owner: owner.to_string(),
-		}))
-		.await
-	{
+	match generate_shares(&database_pool, &grpc_pool, owner).await {
 		Ok(_) => {}
 		Err(error) => {
-			return Err(messages::Error::new(format!(
-				"Error when generate_shares in {}\n{}",
-				*INDEX, error
-			)));
+			return Err(messages::Error::new(format!("Error when generate_shares")));
 		}
 	}
 
